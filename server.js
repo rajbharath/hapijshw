@@ -1,20 +1,50 @@
 var Hapi = require('hapi');
+var Good = require('good');
+var Inert = require('inert');
 
 var server = new Hapi.Server();
 
 server.connection({ port: 4000 });
 
-server.start(function(){
-  console.log("Server running at " + server.info.uri);
+// Registering Logging dependency
+server.register({
+  register: Good,
+  options: {
+    reporters: [{
+      reporter: require('good-console'),
+      events: {
+        response: '*',
+        log: '*'
+      }
+    }]
+  }
+}, function (err) {
+  if(err) {
+    throw err;
+  }
+  server.start(function(){
+    server.log('info', 'Server running at '+ server.info.uri);
+  });
 });
 
-
-server.register(require('inert'), function (err) {
+// Serving Static files
+server.register(Inert, function (err) {
     if (err) {
         throw err;
     }
 
     server.route({
+      method: 'GET',
+      path: '/{name}',
+      handler: function(request, reply) {
+        reply('{ name: '+ request.params.name +'}');
+      }
+    });
+
+});
+
+// Serving Normal http requests
+server.route({
         method: 'GET',
         path: '/home',
         handler: function (request, reply) {
@@ -30,13 +60,3 @@ server.register(require('inert'), function (err) {
         reply('Hello World');
       }
     });
-
-    server.route({
-      method: 'GET',
-      path: '/{name}',
-      handler: function(request, reply) {
-        reply('{ name: '+ request.params.name +'}');
-      }
-    });
-
-});
